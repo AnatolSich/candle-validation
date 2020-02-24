@@ -1,15 +1,18 @@
 
+import exceptions.ValidationException;
 import lombok.extern.apachecommons.CommonsLog;
 import org.apache.log4j.PropertyConfigurator;
 import service.CloudStorageClient;
 import service.ParseCsvService;
 import service.TimeService;
+import service.WebhookClient;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
 
 
@@ -24,21 +27,31 @@ public class Main {
 
         try {
             Properties appProps = new Main().loadProperties();
+            WebhookClient webhookClient = new WebhookClient(appProps);
 
             TimeService timeService = new TimeService(appProps);
-
-            log.info(timeService.getLocalDateTimeInMillis());
+            String fileName = timeService.getLocalDateTimeInMillis();
+            log.info(fileName);
 
             CloudStorageClient cloudStorageClient = new CloudStorageClient(appProps);
 
-            ParseCsvService parseCsvService = new ParseCsvService();
+            ParseCsvService parseCsvService = new ParseCsvService(appProps, fileName);
 
 
-            File file = cloudStorageClient.downloadFile(timeService.getLocalDateTimeInMillis());
+            File file = cloudStorageClient.downloadFile(fileName);
 
             log.info(file.exists());
             log.info(file.getAbsolutePath());
-            //  VerificationService verificationService = new VerificationService(cloudStorageClient);
+
+            List<String[]> allData = parseCsvService.getRecords(file);
+
+            try {
+                log.info("checkSize = " + parseCsvService.checkSize(allData));
+                log.info("checkDescending" + parseCsvService.checkDescending(allData));
+                throw new ValidationException("File checked");
+            } catch (ValidationException ex) {
+                webhookClient.sendMessageToSlack(ex.getMessage());
+            }
 
         } catch (Exception e) {
             log.error(e.getMessage());

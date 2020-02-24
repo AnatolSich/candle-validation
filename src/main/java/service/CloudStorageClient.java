@@ -7,20 +7,14 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
+import exceptions.ValidationException;
 import lombok.extern.apachecommons.CommonsLog;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.StandardCopyOption;
-import java.security.cert.Extension;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Properties;
-import java.util.stream.Collectors;
 
 @CommonsLog
 public class CloudStorageClient {
@@ -32,6 +26,8 @@ public class CloudStorageClient {
     private final String verificationBucketName;
     private final String verificationFolderName;
     private final String fileExtension;
+    private String missingFileMessage;
+
 
     private final AmazonS3 s3client;
 
@@ -41,6 +37,8 @@ public class CloudStorageClient {
         this.verificationFolderName = this.appProps.getProperty("aws.s3.loaded.folder.name");
         this.fileExtension = this.appProps.getProperty("candle-validation.fileExtension");
         this.s3client = buildAmazonClient(this.appProps);
+        this.missingFileMessage = appProps.getProperty("candle-validation.slack.missing_file_message") + " "
+                + appProps.getProperty("aws.s3.loaded.folder.name");
     }
 
     private static AmazonS3 buildAmazonClient(Properties appProps) {
@@ -55,48 +53,52 @@ public class CloudStorageClient {
         return (s3client.doesBucketExistV2(bucket) && s3client.doesObjectExist(bucket, key));
     }
 
-    public boolean isFileExisted(String key) {
+    public boolean isFileExisted(String key) throws ValidationException {
         String path;
         if (verificationFolderName != null) {
-            path = verificationFolderName  + key;
+            path = verificationFolderName + key;
         } else {
             path = key;
         }
         boolean result = checkBucketAndObject(verificationBucketName, path);
+        if (!result) {
+            throw new ValidationException(missingFileMessage);
+        }
         log.info(key + " exists: " + result);
         return result;
     }
 
-    public List<String> getVerificationObjects() {
-        List<String> list;
-        String removeKey;
-        if (verificationFolderName != null) {
-            list = filesListByBucketAndPrefix(verificationBucketName, verificationFolderName);
-            removeKey = verificationFolderName + "/" + appProps.getProperty("aws.s3.loaded.flag");
-        } else {
-            list = filesListByBucket(verificationBucketName);
-            removeKey = appProps.getProperty("aws.s3.loaded.flag");
+    /*
+        public List<String> getVerificationObjects() {
+            List<String> list;
+            String removeKey;
+            if (verificationFolderName != null) {
+                list = filesListByBucketAndPrefix(verificationBucketName, verificationFolderName);
+                removeKey = verificationFolderName + "/" + appProps.getProperty("aws.s3.loaded.flag");
+            } else {
+                list = filesListByBucket(verificationBucketName);
+                removeKey = appProps.getProperty("aws.s3.loaded.flag");
+            }
+            list.remove(removeKey);
+            return list;
         }
-        list.remove(removeKey);
-        return list;
-    }
 
-    private List<String> filesListByBucketAndPrefix(String bucket, String prefix) {
-        return s3client.listObjectsV2(bucket, prefix)
-                .getObjectSummaries()
-                .stream()
-                .map(S3ObjectSummary::getKey)
-                .collect(Collectors.toList());
-    }
+        private List<String> filesListByBucketAndPrefix(String bucket, String prefix) {
+            return s3client.listObjectsV2(bucket, prefix)
+                    .getObjectSummaries()
+                    .stream()
+                    .map(S3ObjectSummary::getKey)
+                    .collect(Collectors.toList());
+        }
 
-    private List<String> filesListByBucket(String bucket) {
-        return s3client.listObjectsV2(bucket)
-                .getObjectSummaries()
-                .stream()
-                .map(S3ObjectSummary::getKey)
-                .collect(Collectors.toList());
-    }
-
+        private List<String> filesListByBucket(String bucket) {
+            return s3client.listObjectsV2(bucket)
+                    .getObjectSummaries()
+                    .stream()
+                    .map(S3ObjectSummary::getKey)
+                    .collect(Collectors.toList());
+        }
+    */
     public File downloadFile(String fileName) throws Exception {
         StringBuilder path = new StringBuilder();
         if (verificationFolderName != null) {
@@ -105,7 +107,7 @@ public class CloudStorageClient {
         if (fileName != null && !fileName.isBlank()) {
             path.append(fileName);
         } else {
-            throw new Exception("No file to download");
+            throw new Exception("No file name sent to download");
         }
 
         if (fileExtension != null) {
@@ -125,17 +127,9 @@ public class CloudStorageClient {
             if (!tempFile.exists()) {
                 log.info("tempFile created: " + tempFile.createNewFile());
             }
-              FileUtils.copyInputStreamToFile(s3Object.getObjectContent(), tempFile);
-
-//            java.nio.file.Files.copy(
-//                    inputStream,
-//                    tempFile.toPath(),
-//                    StandardCopyOption.REPLACE_EXISTING);
-//
-//            IOUtils.closeQuietly(inputStream);
+            FileUtils.copyInputStreamToFile(s3Object.getObjectContent(), tempFile);
         } catch (IOException e) {
-            //  log.error(e.getMessage());
-            System.out.println(Arrays.toString(e.getStackTrace()));
+            log.error(e.getMessage());
         }
         return tempFile;
     }

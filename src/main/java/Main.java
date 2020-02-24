@@ -2,6 +2,7 @@
 import lombok.extern.apachecommons.CommonsLog;
 import org.apache.log4j.PropertyConfigurator;
 import service.CloudStorageClient;
+import service.ParseCsvService;
 import service.TimeService;
 
 import java.io.File;
@@ -30,6 +31,13 @@ public class Main {
 
             CloudStorageClient cloudStorageClient = new CloudStorageClient(appProps);
 
+            ParseCsvService parseCsvService = new ParseCsvService();
+
+
+            File file = cloudStorageClient.downloadFile(timeService.getLocalDateTimeInMillis());
+
+            log.info(file.exists());
+            log.info(file.getAbsolutePath());
             //  VerificationService verificationService = new VerificationService(cloudStorageClient);
 
         } catch (Exception e) {

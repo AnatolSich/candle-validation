@@ -9,8 +9,15 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import lombok.extern.apachecommons.CommonsLog;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.StandardCopyOption;
+import java.security.cert.Extension;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
@@ -18,16 +25,21 @@ import java.util.stream.Collectors;
 @CommonsLog
 public class CloudStorageClient {
 
+    static final String TEMP_DIR_NAME = "./resources/";
+    static final String TEMP_FILE_NAME = "temp";
+
     private final Properties appProps;
     private final String verificationBucketName;
     private final String verificationFolderName;
+    private final String fileExtension;
 
     private final AmazonS3 s3client;
 
     public CloudStorageClient(Properties appProps) {
         this.appProps = appProps;
         this.verificationBucketName = this.appProps.getProperty("aws.s3.loaded.bucket.name");
-        verificationFolderName = this.appProps.getProperty("aws.s3.loaded.folder.name");
+        this.verificationFolderName = this.appProps.getProperty("aws.s3.loaded.folder.name");
+        this.fileExtension = this.appProps.getProperty("candle-validation.fileExtension");
         this.s3client = buildAmazonClient(this.appProps);
     }
 
@@ -46,7 +58,7 @@ public class CloudStorageClient {
     public boolean isFileExisted(String key) {
         String path;
         if (verificationFolderName != null) {
-            path = verificationFolderName + "/" + key;
+            path = verificationFolderName  + key;
         } else {
             path = key;
         }
@@ -85,15 +97,47 @@ public class CloudStorageClient {
                 .collect(Collectors.toList());
     }
 
-    public InputStream downloadFile(String fileName) {
-        String path;
+    public File downloadFile(String fileName) throws Exception {
+        StringBuilder path = new StringBuilder();
         if (verificationFolderName != null) {
-            path = verificationFolderName + "/" + fileName;
-        } else {
-            path = fileName;
+            path.append(verificationFolderName);
         }
-        final S3Object s3Object = s3client.getObject(verificationBucketName, path);
-        return s3Object.getObjectContent();
+        if (fileName != null && !fileName.isBlank()) {
+            path.append(fileName);
+        } else {
+            throw new Exception("No file to download");
+        }
+
+        if (fileExtension != null) {
+            path.append(fileExtension);
+        }
+        log.info("path = " + path);
+        final S3Object s3Object = s3client.getObject(verificationBucketName, path.toString());
+
+        InputStream inputStream = s3Object.getObjectContent();
+
+        File tempDir = new File(TEMP_DIR_NAME);
+        File tempFile = new File(TEMP_DIR_NAME + TEMP_FILE_NAME);
+        try {
+            if (!tempDir.exists()) {
+                log.info("tempDir created: " + tempDir.mkdirs());
+            }
+            if (!tempFile.exists()) {
+                log.info("tempFile created: " + tempFile.createNewFile());
+            }
+              FileUtils.copyInputStreamToFile(s3Object.getObjectContent(), tempFile);
+
+//            java.nio.file.Files.copy(
+//                    inputStream,
+//                    tempFile.toPath(),
+//                    StandardCopyOption.REPLACE_EXISTING);
+//
+//            IOUtils.closeQuietly(inputStream);
+        } catch (IOException e) {
+            //  log.error(e.getMessage());
+            System.out.println(Arrays.toString(e.getStackTrace()));
+        }
+        return tempFile;
     }
 
 //    public void uploadReportLogToAws(String path) {

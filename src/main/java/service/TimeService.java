@@ -59,8 +59,8 @@ public class TimeService {
 
     private boolean isWeekEnd(LocalDateTime date) {
         DayOfWeek checkedDay = date.getDayOfWeek();
-        log.info(checkedDay);
-        log.info(weekEndDays);
+      //  log.info(checkedDay);
+      //  log.info(weekEndDays);
         return weekEndDays.contains(checkedDay);
     }
 

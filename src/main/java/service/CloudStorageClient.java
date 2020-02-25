@@ -31,11 +31,11 @@ public class CloudStorageClient {
 
     private final AmazonS3 s3client;
 
-    public CloudStorageClient(Properties appProps) {
+    public CloudStorageClient(Properties appProps, String fileExtension) {
         this.appProps = appProps;
         this.verificationBucketName = this.appProps.getProperty("aws.s3.loaded.bucket.name");
         this.verificationFolderName = this.appProps.getProperty("aws.s3.loaded.folder.name");
-        this.fileExtension = this.appProps.getProperty("candle-validation.fileExtension");
+        this.fileExtension = fileExtension;
         this.s3client = buildAmazonClient(this.appProps);
         this.missingFileMessage = appProps.getProperty("candle-validation.slack.missing_file_message") + " "
                 + appProps.getProperty("aws.s3.loaded.folder.name");
@@ -53,14 +53,29 @@ public class CloudStorageClient {
         return (s3client.doesBucketExistV2(bucket) && s3client.doesObjectExist(bucket, key));
     }
 
-    public boolean isFileExisted(String key) throws ValidationException {
-        String path;
+    private String createFilePath(String fileName) throws Exception {
+        StringBuilder path = new StringBuilder();
         if (verificationFolderName != null) {
-            path = verificationFolderName + key;
-        } else {
-            path = key;
+            path.append(verificationFolderName);
         }
+        if (fileName != null && !fileName.isBlank()) {
+            path.append(fileName);
+        } else {
+            throw new Exception("No file name sent to download");
+        }
+
+        if (fileExtension != null) {
+            path.append(fileExtension);
+        }
+        log.info("path = " + path);
+        return path.toString();
+    }
+
+    public boolean isFileExisted(String key) throws Exception {
+        String path = createFilePath(key);
         boolean result = checkBucketAndObject(verificationBucketName, path);
+        log.info("result = " + result);
+
         if (!result) {
             throw new ValidationException(missingFileMessage);
         }
@@ -100,21 +115,8 @@ public class CloudStorageClient {
         }
     */
     public File downloadFile(String fileName) throws Exception {
-        StringBuilder path = new StringBuilder();
-        if (verificationFolderName != null) {
-            path.append(verificationFolderName);
-        }
-        if (fileName != null && !fileName.isBlank()) {
-            path.append(fileName);
-        } else {
-            throw new Exception("No file name sent to download");
-        }
-
-        if (fileExtension != null) {
-            path.append(fileExtension);
-        }
-        log.info("path = " + path);
-        final S3Object s3Object = s3client.getObject(verificationBucketName, path.toString());
+        String path = createFilePath(fileName);
+        final S3Object s3Object = s3client.getObject(verificationBucketName, path);
 
         InputStream inputStream = s3Object.getObjectContent();
 
@@ -127,7 +129,7 @@ public class CloudStorageClient {
             if (!tempFile.exists()) {
                 log.info("tempFile created: " + tempFile.createNewFile());
             }
-            FileUtils.copyInputStreamToFile(s3Object.getObjectContent(), tempFile);
+            FileUtils.copyInputStreamToFile(inputStream, tempFile);
         } catch (IOException e) {
             log.error(e.getMessage());
         }

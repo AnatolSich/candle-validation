@@ -21,38 +21,49 @@ import java.util.Properties;
 @CommonsLog
 public class Main {
 
-    private static final String PROPS_PATH = "/s3_backup_verification/configs/";
+    private static final String PROPS_PATH = "/candle-validation/configs/";
 
     public static void main(String[] args) {
 
         try {
-            Properties appProps = new Main().loadProperties();
+            Properties appProps = loadProperties();
             WebhookClient webhookClient = new WebhookClient(appProps);
 
             TimeService timeService = new TimeService(appProps);
             String fileName = timeService.getLocalDateTimeInMillis();
             log.info(fileName);
 
-            CloudStorageClient cloudStorageClient = new CloudStorageClient(appProps);
+            String fileExtension = getFileExtension(appProps);
+            log.info(fileExtension);
 
-            ParseCsvService parseCsvService = new ParseCsvService(appProps, fileName);
+            CloudStorageClient cloudStorageClient = new CloudStorageClient(appProps, fileExtension);
 
+            ParseCsvService parseCsvService = new ParseCsvService(appProps, fileName, fileExtension);
 
-            File file = cloudStorageClient.downloadFile(fileName);
-
-            log.info(file.exists());
-            log.info(file.getAbsolutePath());
-
-            List<String[]> allData = parseCsvService.getRecords(file);
-
+            boolean isFileExisted = false;
             try {
-                log.info("checkSize = " + parseCsvService.checkSize(allData));
-                log.info("checkDescending" + parseCsvService.checkDescending(allData));
-                throw new ValidationException("File checked");
+                isFileExisted = cloudStorageClient.isFileExisted(fileName);
             } catch (ValidationException ex) {
                 webhookClient.sendMessageToSlack(ex.getMessage());
             }
 
+            if (isFileExisted) {
+                File file = cloudStorageClient.downloadFile(fileName);
+
+                log.info(file.exists());
+                log.info(file.getAbsolutePath());
+
+                List<String[]> allData = parseCsvService.getRecords(file);
+
+                try {
+                    cloudStorageClient.isFileExisted(fileName);
+                    log.info("checkSize = " + parseCsvService.checkSize(allData));
+                    log.info("checkDescending" + parseCsvService.checkDescending(allData));
+                    throw new ValidationException("File checked");
+                } catch (ValidationException ex) {
+                    webhookClient.sendMessageToSlack(ex.getMessage());
+                }
+            }
         } catch (Exception e) {
             log.error(e.getMessage());
             System.out.println(Arrays.toString(e.getStackTrace()));
@@ -60,13 +71,13 @@ public class Main {
     }
 
 
-    private Properties loadProperties() throws IOException {
+    private static Properties loadProperties() throws IOException {
         File fileApp = new File(PROPS_PATH + "application.properties");
         InputStream appPath;
         if (fileApp.exists()) {
             appPath = new FileInputStream(fileApp.getPath());
         } else {
-            appPath = this.getClass().getResourceAsStream("/application.properties");
+            appPath = Main.class.getResourceAsStream("/application.properties");
         }
         Properties appProps = new Properties();
         appProps.load(appPath);
@@ -76,13 +87,20 @@ public class Main {
         if (fileLog.exists()) {
             logPath = new FileInputStream(fileLog.getPath());
         } else {
-            logPath = this.getClass().getResourceAsStream("/log4j.properties");
+            logPath = Main.class.getResourceAsStream("/log4j.properties");
         }
         Properties logProps = new Properties();
         logProps.load(logPath);
         PropertyConfigurator.configure(logProps);
         log.info("(Additional info) AppProps ready");
         return appProps;
+    }
+
+    private static String getFileExtension(Properties appProps) {
+        String prop = appProps.getProperty("candle-validation.fileExtension");
+        if (prop == null || prop.isBlank()) {
+            return ".csv";
+        } else return prop.trim();
     }
 
 }

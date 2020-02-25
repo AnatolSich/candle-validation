@@ -21,16 +21,27 @@ public class TimeService {
     private final List<DayOfWeek> weekEndDays;
 
     public TimeService(Properties appProps) {
-        String timeZone = appProps.getProperty("candle-validation.timeZone");
+        String timeZone = getTimeZone(appProps);
         this.appProps = appProps;
         this.zoneId = ZoneId.of(timeZone);
         this.weekEndDays = getPropsWeekEndDays();
     }
 
+    private String getTimeZone(Properties appProps) {
+        String timeZone = appProps.getProperty("candle-validation.timeZone");
+        if (timeZone == null || timeZone.isBlank()) {
+            return "UTC+05:30";
+        } else return timeZone.trim();
+    }
+
     public String getLocalDateTimeInMillis() throws Exception {
         LocalDateTime fileNameDate = getCheckDay();
         String trueResult = String.valueOf(fileNameDate.atZone(zoneId).toInstant().toEpochMilli());
-        return appProps.getProperty("temp.fileName");
+        String trueResult2 = String.valueOf(fileNameDate.atZone(ZoneId.of("UTC+00:00")).toInstant().toEpochMilli());
+        log.info("trueResult=" + trueResult);
+        log.info("trueResult2=" + trueResult2);
+        //  return appProps.getProperty("temp.fileName");
+        return trueResult;
     }
 
     private LocalDateTime getCheckDay() throws Exception {
@@ -59,8 +70,8 @@ public class TimeService {
 
     private boolean isWeekEnd(LocalDateTime date) {
         DayOfWeek checkedDay = date.getDayOfWeek();
-      //  log.info(checkedDay);
-      //  log.info(weekEndDays);
+        //  log.info(checkedDay);
+        //  log.info(weekEndDays);
         return weekEndDays.contains(checkedDay);
     }
 

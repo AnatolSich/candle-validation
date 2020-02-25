@@ -21,31 +21,24 @@ public class WebhookClient {
         this.urlSlackWebHook = appProps.getProperty("candle-validation.slack.webhook");
     }
 
-    public void sendMessageToSlack(String message) {
-        //  StringBuilder messageBuider = new StringBuilder();
-        //  messageBuider.append("*My message*: " + message + NEW_LINE);
-        //  messageBuider.append("*My message*: " + message + NEW_LINE);
-        //  messageBuider.append("*Item example:* " + exampleMessage() + NEW_LINE);
-
+    public void sendMessageToSlack(String message) throws Exception {
         process(message);
     }
 
-    private void process(String message) {
+    private void process(String message) throws Exception {
         Payload payload = Payload.builder()
                 .text(message)
                 .build();
         try {
-            WebhookResponse webhookResponse = Slack.getInstance().send(urlSlackWebHook, payload);
+            Slack slack = Slack.getInstance();
+            WebhookResponse webhookResponse = slack.send(urlSlackWebHook, payload);
             log.info("code -> " + webhookResponse.getCode());
             log.info("body -> " + webhookResponse.getBody());
+            slack.close();
         } catch (IOException e) {
             log.error("Unexpected Error! WebHook:" + urlSlackWebHook);
         }
     }
 
-    private String exampleMessage() {
-        return "Lorem ipsum dolor sit amet, consectetur adipiscing elit. "
-                + "Aliquam eu odio est. Donec viverra hendrerit lacus et tempor.";
-    }
 }
 

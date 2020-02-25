@@ -24,18 +24,18 @@ public class ParseCsvService {
     private String wrongOrderMessage;
     private String fileName;
 
-    public ParseCsvService(Properties appProps, String fileName) {
+    public ParseCsvService(Properties appProps, String fileName, String fileExtension) {
         this.appProps = appProps;
         this.invalidNumberMessage = appProps.getProperty("candle-validation.slack.invalid_number_message") + " "
                 + appProps.getProperty("aws.s3.loaded.bucket.name")
                 + appProps.getProperty("aws.s3.loaded.folder.name")
                 + "%s"
-                + appProps.getProperty("candle-validation.fileExtension");
+                + fileExtension;
         this.wrongOrderMessage = appProps.getProperty("candle-validation.slack.wrong_order_message") + " "
                 + appProps.getProperty("aws.s3.loaded.bucket.name")
                 + appProps.getProperty("aws.s3.loaded.folder.name")
                 + "%s"
-                + appProps.getProperty("candle-validation.fileExtension");
+                + fileExtension;
         this.fileName = fileName;
     }
 

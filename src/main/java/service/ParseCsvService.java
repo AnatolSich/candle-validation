@@ -22,21 +22,19 @@ public class ParseCsvService {
     private final Properties appProps;
     private String invalidNumberMessage;
     private String wrongOrderMessage;
+    private String blankRecordMessage;
     private String fileName;
+    private String fileExtension;
+    private String token;
 
-    public ParseCsvService(Properties appProps, String fileName, String fileExtension) {
+    public ParseCsvService(Properties appProps, String fileName, String fileExtension, String token) {
         this.appProps = appProps;
-        this.invalidNumberMessage = appProps.getProperty("candle-validation.slack.invalid_number_message") + " "
-                + appProps.getProperty("aws.s3.loaded.bucket.name")
-                + appProps.getProperty("aws.s3.loaded.folder.name")
-                + "%s"
-                + fileExtension;
-        this.wrongOrderMessage = appProps.getProperty("candle-validation.slack.wrong_order_message") + " "
-                + appProps.getProperty("aws.s3.loaded.bucket.name")
-                + appProps.getProperty("aws.s3.loaded.folder.name")
-                + "%s"
-                + fileExtension;
+        this.invalidNumberMessage = appProps.getProperty("candle-validation.slack.invalid_number_message");
+        this.wrongOrderMessage = appProps.getProperty("candle-validation.slack.wrong_order_message");
+        this.blankRecordMessage = appProps.getProperty("candle-validation.slack.blank_record_message");
         this.fileName = fileName;
+        this.token = token;
+        this.fileExtension = fileExtension;
     }
 
     public List<String[]> getRecords(File file) throws IOException, CsvException {
@@ -45,16 +43,7 @@ public class ParseCsvService {
         CSVReader csvReader = new CSVReaderBuilder(filereader)
                 .withCSVParser(parser)
                 .build();
-        List<String[]> allData = csvReader.readAll();
-
-        log.info("size = " + allData.size());
-//        for (String[] row : allData) {
-//            for (String cell : row) {
-//                System.out.print(cell + "\t");
-//            }
-//            System.out.println();
-//        }
-        return allData;
+        return csvReader.readAll();
     }
 
     public boolean checkSize(List<String[]> list) throws ValidationException {
@@ -63,25 +52,34 @@ public class ParseCsvService {
         if (numberStr != null) {
             number = Integer.parseInt(numberStr);
         }
+        log.info("Required records count = " + number);
         if (list.size() != number) {
-            throw new ValidationException(String.format(invalidNumberMessage, fileName));
+            throw new ValidationException(String.format(invalidNumberMessage, String.valueOf(list.size()), fileName + fileExtension, String.valueOf(number)));
         } else {
             return true;
         }
     }
 
     public boolean checkDescending(List<String[]> list) throws Exception {
+        if (list == null) {
+            throw new Exception("There are no data to check descending");
+        }
         for (int i = 0; i < list.size() - 1; i++) {
             int j = i + 1;
             String currStr = list.get(i)[0];
             String nextStr = list.get(j)[0];
-            if (currStr == null || currStr.isBlank() || nextStr == null || nextStr.isBlank()) {
-                throw new ValidationException("Corrupted data in file");
+            if (currStr == null || currStr.isBlank()) {
+                log.info("Record number " + i + " is absent");
+                throw new ValidationException(String.format(blankRecordMessage, fileName + fileExtension, token));
+            }
+            if (nextStr == null || nextStr.isBlank()) {
+                log.info("Record number " + j + " is absent");
+                throw new ValidationException(String.format(blankRecordMessage, fileName + fileExtension, token));
             }
             long curr = Long.parseLong(currStr);
             long next = Long.parseLong(nextStr);
             if (curr < next) {
-                throw new ValidationException(String.format(wrongOrderMessage, fileName));
+                throw new ValidationException(String.format(wrongOrderMessage, fileName + fileExtension));
             }
         }
         return true;

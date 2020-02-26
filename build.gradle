@@ -46,6 +46,8 @@ repositories {
 dependencies {
     compile 'org.apache.httpcomponents:httpclient:4.5.10'
 
+    compile group: 'javax.xml.bind', name: 'jaxb-api', version: '2.2.4'
+
     compile group: 'com.amazonaws', name: 'aws-java-sdk-s3', version: '1.11.659'
     compile group: 'log4j', name: 'log4j', version: '1.2.17'
     compile group: 'org.slf4j', name: 'slf4j-nop', version: '1.8.0-beta4'
@@ -55,7 +57,6 @@ dependencies {
     compile group: 'com.opencsv', name: 'opencsv', version: '5.1'
     compile group: 'commons-io', name: 'commons-io', version: '2.6'
     compile group: 'com.github.seratch', name: 'jslack', version: '3.4.1'
-
 
     compileOnly 'org.projectlombok:lombok:1.18.10'
     annotationProcessor 'org.projectlombok:lombok:1.18.10'

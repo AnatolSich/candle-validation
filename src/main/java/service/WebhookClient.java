@@ -32,8 +32,7 @@ public class WebhookClient {
         try {
             Slack slack = Slack.getInstance();
             WebhookResponse webhookResponse = slack.send(urlSlackWebHook, payload);
-            log.info("code -> " + webhookResponse.getCode());
-            log.info("body -> " + webhookResponse.getBody());
+            log.info("Message: \n\"" + message + "\"\nSent to slack." + "\nResponse is : " + webhookResponse.getBody());
             slack.close();
         } catch (IOException e) {
             log.error("Unexpected Error! WebHook:" + urlSlackWebHook);

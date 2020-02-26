@@ -28,7 +28,7 @@ public class TimeService {
     }
 
     private String getTimeZone(Properties appProps) {
-        String timeZone = appProps.getProperty("candle-validation.timeZone");
+        String timeZone = appProps.getProperty("log4j.appender.rollingFile.timeZone");
         if (timeZone == null || timeZone.isBlank()) {
             return "UTC+05:30";
         } else return timeZone.trim();
@@ -36,24 +36,20 @@ public class TimeService {
 
     public String getLocalDateTimeInMillis() throws Exception {
         LocalDateTime fileNameDate = getCheckDay();
-        String trueResult = String.valueOf(fileNameDate.atZone(zoneId).toInstant().toEpochMilli());
-        String trueResult2 = String.valueOf(fileNameDate.atZone(ZoneId.of("UTC+00:00")).toInstant().toEpochMilli());
-        log.info("trueResult=" + trueResult);
-        log.info("trueResult2=" + trueResult2);
-        //  return appProps.getProperty("temp.fileName");
-        return trueResult;
+        String result = String.valueOf(fileNameDate.atZone(ZoneId.of("UTC+00:00")).toInstant().toEpochMilli());
+        log.info("LocalDateTimeInMillis = " + result);
+        return result;
     }
 
     private LocalDateTime getCheckDay() throws Exception {
         String checkDateStr = appProps.getProperty("candle-validation.checkingDate");
-        log.info("checkDateStr = " + checkDateStr);
+        log.info("CheckDate from props = " + checkDateStr);
         if (checkDateStr != null && !checkDateStr.isBlank()) {
             return LocalDate.parse(checkDateStr, formatterCheckDate).atStartOfDay();
         }
+        LocalDate localDate = LocalDate.now(zoneId);
+        log.info("CurrentDate = " + localDate.format(formatterCheckDate));
         LocalDateTime currentDate = LocalDate.now(zoneId).atStartOfDay();
-        log.info("currentDate = " + currentDate.format(formatterNifty));
-
-
         LocalDateTime fileNameDate = currentDate.minusDays(1L);
 
         int count = 1;
@@ -64,23 +60,23 @@ public class TimeService {
                 throw new Exception("Can't define date for file name");
             }
         }
-        log.info("fileNameDate = " + fileNameDate.format(formatterNifty));
+        log.info("FileNameDate = " + fileNameDate.format(formatterNifty));
         return fileNameDate;
     }
 
     private boolean isWeekEnd(LocalDateTime date) {
         DayOfWeek checkedDay = date.getDayOfWeek();
-        //  log.info(checkedDay);
-        //  log.info(weekEndDays);
         return weekEndDays.contains(checkedDay);
     }
 
     private List<DayOfWeek> getPropsWeekEndDays() {
         String prop = appProps.getProperty("candle-validation.weekEnd");
         List<DayOfWeek> result = new ArrayList<>();
+        log.info("WeekEndDays from props: " + prop);
         if (prop == null || prop.isBlank()) {
             result.add(DayOfWeek.SATURDAY);
             result.add(DayOfWeek.SUNDAY);
+            log.info("Result WeekEndDays: " + result);
             return result;
         }
         String[] splitProp = prop.split(",");
@@ -95,6 +91,7 @@ public class TimeService {
             }
         }
         Collections.sort(result);
+        log.info("Result WeekEndDays: " + result);
         return result;
     }
 

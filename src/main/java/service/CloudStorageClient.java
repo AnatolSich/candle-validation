@@ -14,6 +14,7 @@ import org.apache.commons.io.FileUtils;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.util.Properties;
 
 @CommonsLog
@@ -25,20 +26,25 @@ public class CloudStorageClient {
     private final Properties appProps;
     private final String verificationBucketName;
     private final String verificationFolderName;
+    private final String reportBucketName;
+    private final String reportFolderName;
     private final String fileExtension;
+    private final String token;
     private String missingFileMessage;
 
 
     private final AmazonS3 s3client;
 
-    public CloudStorageClient(Properties appProps, String fileExtension) {
+    public CloudStorageClient(Properties appProps, String fileExtension, String token) {
         this.appProps = appProps;
         this.verificationBucketName = this.appProps.getProperty("aws.s3.loaded.bucket.name");
         this.verificationFolderName = this.appProps.getProperty("aws.s3.loaded.folder.name");
+        this.reportBucketName = this.appProps.getProperty("aws.s3.report.bucket.name");
+        this.reportFolderName = this.appProps.getProperty("aws.s3.report.folder.name");
         this.fileExtension = fileExtension;
+        this.token = token;
         this.s3client = buildAmazonClient(this.appProps);
-        this.missingFileMessage = appProps.getProperty("candle-validation.slack.missing_file_message") + " "
-                + appProps.getProperty("aws.s3.loaded.folder.name");
+        this.missingFileMessage = appProps.getProperty("candle-validation.slack.missing_file_message");
     }
 
     private static AmazonS3 buildAmazonClient(Properties appProps) {
@@ -67,53 +73,20 @@ public class CloudStorageClient {
         if (fileExtension != null) {
             path.append(fileExtension);
         }
-        log.info("path = " + path);
         return path.toString();
     }
 
     public boolean isFileExisted(String key) throws Exception {
         String path = createFilePath(key);
+        log.info("AWS path to file = " + path);
         boolean result = checkBucketAndObject(verificationBucketName, path);
-        log.info("result = " + result);
-
         if (!result) {
-            throw new ValidationException(missingFileMessage);
+            throw new ValidationException(missingFileMessage + " " + token);
         }
-        log.info(key + " exists: " + result);
-        return result;
+        log.info("IsFileExisted = " + true);
+        return true;
     }
 
-    /*
-        public List<String> getVerificationObjects() {
-            List<String> list;
-            String removeKey;
-            if (verificationFolderName != null) {
-                list = filesListByBucketAndPrefix(verificationBucketName, verificationFolderName);
-                removeKey = verificationFolderName + "/" + appProps.getProperty("aws.s3.loaded.flag");
-            } else {
-                list = filesListByBucket(verificationBucketName);
-                removeKey = appProps.getProperty("aws.s3.loaded.flag");
-            }
-            list.remove(removeKey);
-            return list;
-        }
-
-        private List<String> filesListByBucketAndPrefix(String bucket, String prefix) {
-            return s3client.listObjectsV2(bucket, prefix)
-                    .getObjectSummaries()
-                    .stream()
-                    .map(S3ObjectSummary::getKey)
-                    .collect(Collectors.toList());
-        }
-
-        private List<String> filesListByBucket(String bucket) {
-            return s3client.listObjectsV2(bucket)
-                    .getObjectSummaries()
-                    .stream()
-                    .map(S3ObjectSummary::getKey)
-                    .collect(Collectors.toList());
-        }
-    */
     public File downloadFile(String fileName) throws Exception {
         String path = createFilePath(fileName);
         final S3Object s3Object = s3client.getObject(verificationBucketName, path);
@@ -136,22 +109,37 @@ public class CloudStorageClient {
         return tempFile;
     }
 
-//    public void uploadReportLogToAws(String path) {
-//        String key = Path.of(path).getFileName().toString();
-//        if (reportBucketName == null) {
-//            log.info(key + " is NOT uploaded to AWS");
-//            return;
-//        }
-//        if (!s3client.doesBucketExistV2(reportBucketName)) {
-//            s3client.createBucket(reportBucketName);
-//        }
-//        if (reportFolderName != null && !reportFolderName.isBlank()) {
-//            key = reportFolderName + "/" + key;
-//        }
-//        File file = new File(path);
-//        s3client.putObject(reportBucketName, key, file);
-//        log.info(key + " is uploaded to AWS");
-//    }
+    public boolean deleteTempFile() {
+        File tempDir = new File(TEMP_DIR_NAME);
+        File tempFile = new File(TEMP_DIR_NAME + TEMP_FILE_NAME);
 
+        if (tempFile.exists()) {
+            log.info("TempFile deleted: " + tempFile.delete());
+        }
+        if (tempDir.exists()) {
+            log.info("TempDir deleted: " + tempDir.delete());
+        }
+        if (!tempFile.exists() && !tempDir.exists()) {
+            return true;
+        }
+        return false;
+    }
+
+    public void uploadReportLogToAws(String path) {
+        String key = Path.of(path).getFileName().toString();
+        if (reportBucketName == null) {
+            log.info(key + " is NOT uploaded to AWS");
+            return;
+        }
+        if (!s3client.doesBucketExistV2(reportBucketName)) {
+            s3client.createBucket(reportBucketName);
+        }
+        if (reportFolderName != null && !reportFolderName.isBlank()) {
+            key = reportFolderName + "/" + key;
+        }
+        File file = new File(path);
+        s3client.putObject(reportBucketName, key, file);
+        log.info(key + " is uploaded to AWS");
+    }
 
 }

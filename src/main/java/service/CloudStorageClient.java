@@ -20,10 +20,9 @@ import java.util.Properties;
 @CommonsLog
 public class CloudStorageClient {
 
-    static final String TEMP_DIR_NAME = "./resources/";
-    static final String TEMP_FILE_NAME = "temp";
+    private static final String TEMP_DIR_NAME = "./resources/";
+    private static final String TEMP_FILE_NAME = "temp";
 
-    private final Properties appProps;
     private final String verificationBucketName;
     private final String verificationFolderName;
     private final String reportBucketName;
@@ -36,14 +35,13 @@ public class CloudStorageClient {
     private final AmazonS3 s3client;
 
     public CloudStorageClient(Properties appProps, String fileExtension, String token) {
-        this.appProps = appProps;
-        this.verificationBucketName = this.appProps.getProperty("aws.s3.loaded.bucket.name");
-        this.verificationFolderName = this.appProps.getProperty("aws.s3.loaded.folder.name");
-        this.reportBucketName = this.appProps.getProperty("aws.s3.report.bucket.name");
-        this.reportFolderName = this.appProps.getProperty("aws.s3.report.folder.name");
+        this.verificationBucketName = appProps.getProperty("aws.s3.loaded.bucket.name");
+        this.verificationFolderName = appProps.getProperty("aws.s3.loaded.folder.name");
+        this.reportBucketName = appProps.getProperty("aws.s3.report.bucket.name");
+        this.reportFolderName = appProps.getProperty("aws.s3.report.folder.name");
         this.fileExtension = fileExtension;
         this.token = token;
-        this.s3client = buildAmazonClient(this.appProps);
+        this.s3client = buildAmazonClient(appProps);
         this.missingFileMessage = appProps.getProperty("candle-validation.slack.missing_file_message");
     }
 
@@ -109,7 +107,7 @@ public class CloudStorageClient {
         return tempFile;
     }
 
-    public boolean deleteTempFile() {
+    public void deleteTempFile() {
         File tempDir = new File(TEMP_DIR_NAME);
         File tempFile = new File(TEMP_DIR_NAME + TEMP_FILE_NAME);
 
@@ -119,20 +117,16 @@ public class CloudStorageClient {
         if (tempDir.exists()) {
             log.info("TempDir deleted: " + tempDir.delete());
         }
-        if (!tempFile.exists() && !tempDir.exists()) {
-            return true;
-        }
-        return false;
     }
 
-    public void uploadReportLogToAws(String path) {
+    public void uploadReportLogToAws(String path) throws Exception {
         String key = Path.of(path).getFileName().toString();
         if (reportBucketName == null) {
             log.info(key + " is NOT uploaded to AWS");
             return;
         }
         if (!s3client.doesBucketExistV2(reportBucketName)) {
-            s3client.createBucket(reportBucketName);
+            throw new Exception("There's no such AWS bucket \"" + reportBucketName.substring(1) + "\" to upload report");
         }
         if (reportFolderName != null && !reportFolderName.isBlank()) {
             key = reportFolderName + "/" + key;

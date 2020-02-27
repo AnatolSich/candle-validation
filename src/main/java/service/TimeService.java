@@ -1,6 +1,8 @@
 package service;
 
 import lombok.extern.apachecommons.CommonsLog;
+import org.apache.log4j.Logger;
+import utilities.TimestampFileAppender;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -19,16 +21,17 @@ public class TimeService {
     private final Properties appProps;
     private final ZoneId zoneId;
     private final List<DayOfWeek> weekEndDays;
+    private final TimestampFileAppender timestampFileAppender;
 
-    public TimeService(Properties appProps) {
-        String timeZone = getTimeZone(appProps);
+    public TimeService(Properties appProps, String token) {
         this.appProps = appProps;
-        this.zoneId = ZoneId.of(timeZone);
+        this.timestampFileAppender = (TimestampFileAppender) Logger.getRootLogger().getAppender("rollingFile");
+        this.zoneId = ZoneId.of(getTimeZone(appProps));
         this.weekEndDays = getPropsWeekEndDays();
     }
 
     private String getTimeZone(Properties appProps) {
-        String timeZone = appProps.getProperty("log4j.appender.rollingFile.timeZone");
+        String timeZone = timestampFileAppender.getTimeZone();
         if (timeZone == null || timeZone.isBlank()) {
             return "UTC+05:30";
         } else return timeZone.trim();
@@ -37,7 +40,7 @@ public class TimeService {
     public String getLocalDateTimeInMillis() throws Exception {
         LocalDateTime fileNameDate = getCheckDay();
         String result = String.valueOf(fileNameDate.atZone(ZoneId.of("UTC+00:00")).toInstant().toEpochMilli());
-        log.info("LocalDateTimeInMillis = " + result);
+        log.info("FileNameDate in millis = " + result);
         return result;
     }
 
@@ -47,6 +50,7 @@ public class TimeService {
         if (checkDateStr != null && !checkDateStr.isBlank()) {
             return LocalDate.parse(checkDateStr, formatterCheckDate).atStartOfDay();
         }
+        log.info("zoneId" + zoneId);
         LocalDate localDate = LocalDate.now(zoneId);
         log.info("CurrentDate = " + localDate.format(formatterCheckDate));
         LocalDateTime currentDate = LocalDate.now(zoneId).atStartOfDay();
@@ -93,6 +97,10 @@ public class TimeService {
         Collections.sort(result);
         log.info("Result WeekEndDays: " + result);
         return result;
+    }
+
+    public String getLogFileName() {
+        return this.timestampFileAppender.getFileName();
     }
 
 }

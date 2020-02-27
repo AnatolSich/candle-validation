@@ -2,7 +2,6 @@ package utilities;
 
 import lombok.Getter;
 import lombok.Setter;
-import lombok.extern.apachecommons.CommonsLog;
 import org.apache.log4j.RollingFileAppender;
 
 import java.io.IOException;
@@ -12,7 +11,7 @@ import java.time.format.DateTimeFormatter;
 
 public class TimestampFileAppender extends RollingFileAppender {
 
-    private static final String TARGET = "\\{timestamp}";
+    private static final String TIMESTAMP_TARGET = "\\{timestamp}";
 
     @Getter
     @Setter
@@ -28,8 +27,7 @@ public class TimestampFileAppender extends RollingFileAppender {
     }
 
     private String createFileName(String file) {
-        System.out.println("timeZone = " + timeZone);
-        String fileName = file.replaceAll(TARGET, LocalDateTime.now(ZoneId.of(timeZone)).format(DateTimeFormatter.ofPattern(timestampPattern)));
+        String fileName = file.replaceAll(TIMESTAMP_TARGET, LocalDateTime.now(ZoneId.of(timeZone)).format(DateTimeFormatter.ofPattern(timestampPattern)));
         this.fileName = fileName;
         return fileName;
     }

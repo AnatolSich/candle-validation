@@ -78,7 +78,7 @@ public class ParseCsvService {
             }
             long curr = Long.parseLong(currStr);
             long next = Long.parseLong(nextStr);
-            if (curr < next) {
+            if (curr >= next) {
                 throw new ValidationException(String.format(wrongOrderMessage, fileName + fileExtension));
             }
         }

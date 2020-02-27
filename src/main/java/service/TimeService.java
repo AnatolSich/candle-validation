@@ -50,7 +50,6 @@ public class TimeService {
         if (checkDateStr != null && !checkDateStr.isBlank()) {
             return LocalDate.parse(checkDateStr, formatterCheckDate).atStartOfDay();
         }
-        log.info("zoneId" + zoneId);
         LocalDate localDate = LocalDate.now(zoneId);
         log.info("CurrentDate = " + localDate.format(formatterCheckDate));
         LocalDateTime currentDate = LocalDate.now(zoneId).atStartOfDay();

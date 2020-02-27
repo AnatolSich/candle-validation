@@ -28,14 +28,14 @@ public class Main {
             Properties appProps = loadProperties();
             WebhookClient webhookClient = new WebhookClient(appProps);
 
-            String fileExtension = getFileExtension(appProps);
-            log.info("FileExtension = " + fileExtension);
-
             String token = getToken(appProps);
             log.info("Token = " + token);
 
             TimeService timeService = new TimeService(appProps, token);
             String fileName = timeService.getLocalDateTimeInMillis();
+
+            String fileExtension = getFileExtension(appProps);
+            log.info("FileExtension = " + fileExtension);
 
             CloudStorageClient cloudStorageClient = new CloudStorageClient(appProps, fileExtension, token);
             ParseCsvService parseCsvService = new ParseCsvService(appProps, fileName, fileExtension, token);
@@ -50,8 +50,8 @@ public class Main {
                     List<String[]> allData = parseCsvService.getRecords(file);
                     log.info("All records are downloaded = " + (allData != null ? allData.size() : null));
                     log.info("Size is equal to required = " + parseCsvService.checkSize(allData));
-                    log.info("Records are in descending order + " + parseCsvService.checkDescending(allData));
-                    throw new ValidationException("File checked");
+                    log.info("Records are in descending order = " + parseCsvService.checkDescending(allData));
+                    throw new ValidationException("File for token " + token + " checked successfully");
                 }
             } catch (ValidationException ex) {
                 webhookClient.sendMessageToSlack(ex.getMessage());
@@ -87,10 +87,9 @@ public class Main {
         }
         Properties logProps = new Properties();
         logProps.load(logPath);
-        improveLogProperties(appProps,logProps);
+        improveLogProperties(appProps, logProps);
         PropertyConfigurator.configure(logProps);
         log.info("AppProps ready");
-        log.info(logProps.getProperty("log4j.appender.rollingFile.token"));
         return appProps;
     }
 
@@ -103,7 +102,7 @@ public class Main {
         }
     }
 
-   private static void improveLogProperties(Properties appProps, Properties logProps) {
+    private static void improveLogProperties(Properties appProps, Properties logProps) {
         appProps.setProperty("token", getToken(appProps));
         Set<Map.Entry<Object, Object>> set = logProps.entrySet();
         StringSubstitutor sub = new StringSubstitutor((Map) appProps);

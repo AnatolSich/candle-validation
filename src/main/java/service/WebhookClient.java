@@ -11,8 +11,7 @@ import java.util.Properties;
 
 @CommonsLog
 @RequiredArgsConstructor
-public class WebhookClient {
-    private static final String NEW_LINE = "\n";
+public class WebhookClient { ;
 
     private String urlSlackWebHook;
 

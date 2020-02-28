@@ -23,14 +23,14 @@ public class TimeService {
     private final List<DayOfWeek> weekEndDays;
     private final TimestampFileAppender timestampFileAppender;
 
-    public TimeService(Properties appProps, String token) {
+    public TimeService(Properties appProps) {
         this.appProps = appProps;
         this.timestampFileAppender = (TimestampFileAppender) Logger.getRootLogger().getAppender("rollingFile");
-        this.zoneId = ZoneId.of(getTimeZone(appProps));
+        this.zoneId = ZoneId.of(getTimeZone());
         this.weekEndDays = getPropsWeekEndDays();
     }
 
-    private String getTimeZone(Properties appProps) {
+    private String getTimeZone() {
         String timeZone = timestampFileAppender.getTimeZone();
         if (timeZone == null || timeZone.isBlank()) {
             return "UTC+05:30";

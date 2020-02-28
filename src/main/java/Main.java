@@ -31,7 +31,7 @@ public class Main {
             String token = getToken(appProps);
             log.info("Token = " + token);
 
-            TimeService timeService = new TimeService(appProps, token);
+            TimeService timeService = new TimeService(appProps);
             String fileName = timeService.getLocalDateTimeInMillis();
 
             String fileExtension = getFileExtension(appProps);
@@ -93,8 +93,10 @@ public class Main {
         return appProps;
     }
 
+    @SuppressWarnings("DuplicatedCode")
     private static void improveAppProperties(Properties appProps) {
         Set<Map.Entry<Object, Object>> set = appProps.entrySet();
+        @SuppressWarnings("unchecked")
         StringSubstitutor sub = new StringSubstitutor((Map) appProps);
         for (Map.Entry<Object, Object> entry : set
         ) {
@@ -102,9 +104,11 @@ public class Main {
         }
     }
 
+    @SuppressWarnings("DuplicatedCode")
     private static void improveLogProperties(Properties appProps, Properties logProps) {
         appProps.setProperty("token", getToken(appProps));
         Set<Map.Entry<Object, Object>> set = logProps.entrySet();
+        @SuppressWarnings("unchecked")
         StringSubstitutor sub = new StringSubstitutor((Map) appProps);
         for (Map.Entry<Object, Object> entry : set
         ) {
@@ -119,6 +123,7 @@ public class Main {
         } else return prop.trim();
     }
 
+    @SuppressWarnings("ForLoopReplaceableByForEach")
     private static String getToken(Properties appProps) {
         String prop = appProps.getProperty("aws.s3.loaded.folder.name");
         String[] splitProp = prop.split("/");

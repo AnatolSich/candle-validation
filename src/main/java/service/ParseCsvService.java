@@ -20,12 +20,12 @@ public class ParseCsvService {
 
 
     private final Properties appProps;
-    private String invalidNumberMessage;
-    private String wrongOrderMessage;
-    private String blankRecordMessage;
-    private String fileName;
-    private String fileExtension;
-    private String token;
+    private final String invalidNumberMessage;
+    private final String wrongOrderMessage;
+    private final String blankRecordMessage;
+    private final String fileName;
+    private final String fileExtension;
+    private final String token;
 
     public ParseCsvService(Properties appProps, String fileName, String fileExtension, String token) {
         this.appProps = appProps;
@@ -46,6 +46,7 @@ public class ParseCsvService {
         return csvReader.readAll();
     }
 
+    @SuppressWarnings("SameReturnValue")
     public boolean checkSize(List<String[]> list) throws ValidationException {
         String numberStr = appProps.getProperty("candle-validation.count_number_to_validate");
         int number = 375;
@@ -60,6 +61,7 @@ public class ParseCsvService {
         }
     }
 
+    @SuppressWarnings({"SameReturnValue", "DuplicateExpressions", "RedundantSuppression"})
     public boolean checkDescending(List<String[]> list) throws Exception {
         if (list == null) {
             throw new Exception("There are no data to check descending");

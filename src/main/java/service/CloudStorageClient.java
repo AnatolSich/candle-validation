@@ -29,7 +29,7 @@ public class CloudStorageClient {
     private final String reportFolderName;
     private final String fileExtension;
     private final String token;
-    private String missingFileMessage;
+    private final String missingFileMessage;
 
 
     private final AmazonS3 s3client;
@@ -74,11 +74,13 @@ public class CloudStorageClient {
         return path.toString();
     }
 
+    @SuppressWarnings("SameReturnValue")
     public boolean isFileExisted(String key) throws Exception {
         String path = createFilePath(key);
         log.info("AWS path to file = " + path);
         boolean result = checkBucketAndObject(verificationBucketName, path);
         if (!result) {
+            log.info("IsFileExisted = " + false);
             throw new ValidationException(missingFileMessage + " " + token);
         }
         log.info("IsFileExisted = " + true);

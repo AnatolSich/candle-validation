@@ -15,8 +15,8 @@ import java.util.*;
 @CommonsLog
 public class TimeService {
 
-    private static final DateTimeFormatter formatterNifty = DateTimeFormatter.ofPattern("dd.MM.yyyy HH.mm.ss");
-    private static final DateTimeFormatter formatterCheckDate = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+    private static final DateTimeFormatter FORMATTER_WITH_TIME = DateTimeFormatter.ofPattern("dd.MM.yyyy HH.mm.ss");
+    private static final DateTimeFormatter FORMATTER_ONLY_DAY = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
     private final Properties appProps;
     private final ZoneId zoneId;
@@ -48,10 +48,10 @@ public class TimeService {
         String checkDateStr = appProps.getProperty("candle-validation.checkingDate");
         log.info("CheckDate from props = " + checkDateStr);
         if (checkDateStr != null && !checkDateStr.isBlank()) {
-            return LocalDate.parse(checkDateStr, formatterCheckDate).atStartOfDay();
+            return LocalDate.parse(checkDateStr, FORMATTER_ONLY_DAY).atStartOfDay();
         }
         LocalDate localDate = LocalDate.now(zoneId);
-        log.info("CurrentDate = " + localDate.format(formatterCheckDate));
+        log.info("CurrentDate = " + localDate.format(FORMATTER_ONLY_DAY));
         LocalDateTime currentDate = LocalDate.now(zoneId).atStartOfDay();
         LocalDateTime fileNameDate = currentDate.minusDays(1L);
 
@@ -63,7 +63,7 @@ public class TimeService {
                 throw new Exception("Can't define date for file name");
             }
         }
-        log.info("FileNameDate = " + fileNameDate.format(formatterNifty));
+        log.info("FileNameDate = " + fileNameDate.format(FORMATTER_WITH_TIME));
         return fileNameDate;
     }
 
